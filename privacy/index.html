@@ -23,8 +23,8 @@
     <section class="card">
       <h2>Location information</h2>
       <p>If you grant location permission, AbaWeather uses your device location to determine the area for which weather information should be displayed. You may also search for another location instead of using your current location.</p>
-      <p>Coordinates needed to retrieve weather information may be sent to the AbaWeather backend and weather providers. The backend rounds location coordinates into geographic cache areas before requesting current conditions from Tomorrow.io. Device-derived current-location requests use smaller cache areas and shorter cache periods than searched locations.</p>
-      <p>AbaWeather does not maintain a developer-operated database of your location history and does not sell, rent, or use location information for advertising or behavioral tracking.</p>
+      <p>Coordinates needed to retrieve weather information may be sent to the AbaWeather backend and weather providers. For current-weather requests, location coordinates are rounded into geographic areas and used as keys for temporary cloud-hosted cache entries. Device-location weather data is considered fresh for up to 5 minutes, while searched-location data is considered fresh for up to 20 minutes. Expired cache entries are managed and eventually evicted automatically by the hosting infrastructure and are not associated by AbaWeather with an account, device, or user profile.</p>
+      <p>AbaWeather does not create or maintain a user-specific location history and does not sell, rent, or use location information for advertising or behavioral tracking.</p>
       <p>You can deny or revoke location access at any time through iOS or iPadOS Settings. If location permission is unavailable, you may still use location search to view weather for a place you select.</p>
     </section>
 
@@ -43,7 +43,7 @@
 
     <section class="card">
       <h2>AbaWeather backend</h2>
-      <p>AbaWeather uses a Cloudflare-hosted backend to protect service credentials, cache current-condition requests, and process AbaCast requests. The developer does not use this backend to build advertising profiles or sell personal information.</p>
+      <p>AbaWeather uses a cloud-hosted backend to protect service credentials, temporarily cache current-condition requests, and process AbaCast requests. The developer does not use this backend to build advertising profiles or sell personal information.</p>
       <p>Third-party infrastructure providers may process request and operational data as necessary to provide their services, subject to their own privacy practices and terms.</p>
     </section>
 
