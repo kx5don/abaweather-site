@@ -12,34 +12,49 @@
     <section class="hero card">
       <div class="eyebrow">AbaWeather</div>
       <h1>Privacy Policy</h1>
-      <p class="lead">Effective September 7, 2026</p>
+      <p class="lead">Effective September 14, 2026</p>
     </section>
 
     <section class="card">
       <h2>Overview</h2>
-      <p>AbaWeather is a personal weather application developed for friends and family. It is designed to provide weather information without advertising, behavioral profiling, or third-party tracking.</p>
+      <p>AbaWeather is a personal weather application developed for friends and family. It is designed to provide weather information without advertising, behavioral profiling, or cross-app tracking.</p>
     </section>
 
     <section class="card">
       <h2>Location information</h2>
-      <p>If you grant location permission, AbaWeather uses your device location to determine the area for which weather information should be displayed. Location access is used only to provide the app's weather features.</p>
-      <p>AbaWeather does not maintain a developer-operated database of your location history and does not sell, rent, or use location information for advertising or tracking.</p>
-      <p>You can deny or revoke location access at any time through iOS Settings. Location access is required for AbaWeather to provide weather information for your current location.</p>
+      <p>If you grant location permission, AbaWeather uses your device location to determine the area for which weather information should be displayed. You may also search for another location instead of using your current location.</p>
+      <p>Coordinates needed to retrieve weather information may be sent to the AbaWeather backend and weather providers. The backend rounds location coordinates into geographic cache areas before requesting current conditions from Tomorrow.io. Device-derived current-location requests use smaller cache areas and shorter cache periods than searched locations.</p>
+      <p>AbaWeather does not maintain a developer-operated database of your location history and does not sell, rent, or use location information for advertising or behavioral tracking.</p>
+      <p>You can deny or revoke location access at any time through iOS or iPadOS Settings. If location permission is unavailable, you may still use location search to view weather for a place you select.</p>
     </section>
 
     <section class="card">
-      <h2>Weather services</h2>
-      <p>AbaWeather retrieves weather information from Apple WeatherKit and from public-domain data provided by the U.S. National Weather Service (NWS). Requests to Apple services are subject to Apple's applicable privacy practices and terms. NWS information is supplied by the U.S. government for public use.</p>
+      <h2>Weather and mapping services</h2>
+      <p>AbaWeather uses Tomorrow.io for current weather conditions. U.S. National Weather Service (NWS) services provide forecast data, weather alerts, radar imagery, and fallback weather observations when needed.</p>
+      <p>Apple mapping and geocoding services are used for location search and map display. Requests to these third-party services are subject to their applicable privacy practices and terms.</p>
+    </section>
+
+    <section class="card">
+      <h2>AbaCast summaries</h2>
+      <p>AbaCast creates a short plain-language weather summary from weather information already available in the app. To generate a cloud-based AbaCast, the app sends a weather snapshot to the AbaWeather backend, which forwards that snapshot to OpenAI for text generation.</p>
+      <p>The AbaCast weather snapshot can include a general place name, current weather conditions, and short-term forecast information. Raw device GPS coordinates are not included in the AbaCast prompt sent to OpenAI.</p>
+      <p>If the cloud-based AbaCast service is unavailable or a response does not pass the app's validation checks, AbaWeather can generate a local rule-based summary instead.</p>
+    </section>
+
+    <section class="card">
+      <h2>AbaWeather backend</h2>
+      <p>AbaWeather uses a Cloudflare-hosted backend to protect service credentials, cache current-condition requests, and process AbaCast requests. The developer does not use this backend to build advertising profiles or sell personal information.</p>
+      <p>Third-party infrastructure providers may process request and operational data as necessary to provide their services, subject to their own privacy practices and terms.</p>
     </section>
 
     <section class="card">
       <h2>Data collection and tracking</h2>
-      <p>AbaWeather does not include third-party advertising, analytics SDKs, or cross-app tracking technologies. The developer does not use the app to create advertising profiles or sell personal information.</p>
+      <p>AbaWeather does not include third-party advertising SDKs, behavioral analytics SDKs, or cross-app tracking technologies. The developer does not use the app to create advertising profiles or sell personal information.</p>
     </section>
 
     <section class="card">
       <h2>Data stored on your device</h2>
-      <p>The app may store limited preferences or app state locally on your device as necessary for normal operation. This information is not used for advertising or tracking.</p>
+      <p>The app may store limited preferences, cached weather information, or app state locally on your device as necessary for normal operation. This information is not used for advertising or behavioral tracking.</p>
     </section>
 
     <section class="card">
@@ -49,7 +64,7 @@
 
     <section class="card">
       <h2>Changes to this policy</h2>
-      <p>This Privacy Policy may be updated if AbaWeather's features or data practices change. The effective date shown above will be updated when material changes are made.</p>
+      <p>This Privacy Policy may be updated if AbaWeather's features, service providers, or data practices change. The effective date shown above will be updated when material changes are made.</p>
     </section>
 
     <section class="card">
