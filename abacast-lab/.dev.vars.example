@@ -1,0 +1,8 @@
+# Copy to .dev.vars for local development only.
+# Never commit real values.
+
+OPENAI_API_KEY=replace_me
+ANTHROPIC_API_KEY=replace_me
+GEMINI_API_KEY=replace_me
+GENERATE_SECRET=replace_with_a_long_random_value
+RATE_LIMIT_SALT=replace_with_a_different_long_random_value
