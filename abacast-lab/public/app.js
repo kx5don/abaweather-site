@@ -85,7 +85,10 @@ async function runExperiment() {
   els.cooldownText.textContent = 'Fetching fresh NWS data and calling each provider in parallel.';
 
   try {
-    const response = await fetch('/api/manual-run', { method: 'POST' });
+    const response = await fetch('/api/manual-run', {
+      method: 'POST',
+      headers: { 'X-AbaCast-Lab': 'dashboard' }
+    });
     const payload = await response.json();
 
     if (response.status === 429) {
