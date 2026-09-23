@@ -1,0 +1,16 @@
+{
+  "name": "abacast-model-lab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Side-by-side AbaCast model comparison using live NWS weather data.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "d1:create": "wrangler d1 create abacast-model-lab",
+    "d1:migrate:local": "wrangler d1 migrations apply abacast-model-lab --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply abacast-model-lab --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
