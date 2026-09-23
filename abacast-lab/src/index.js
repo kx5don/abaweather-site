@@ -80,11 +80,18 @@ export default {
 
         if (!lock) {
           const existing = await getExperimentByScheduleBucket(env.DB, bucket);
+          if (existing) {
+            return json({
+              ok: true,
+              reused: true,
+              experiment: existing
+            });
+          }
+
           return json({
-            ok: true,
-            reused: true,
-            experiment: existing
-          });
+            ok: false,
+            error: 'Generation already in progress'
+          }, 409, { 'Retry-After': '30' });
         }
 
         try {
