@@ -181,10 +181,9 @@ async function generateExperiment(env, source, scheduleBucket) {
 }
 
 async function buildWeatherFixture(env) {
-  const locationName = env.LOCATION_NAME || DEFAULTS.locationName;
+  const configuredLocationName = env.LOCATION_NAME || DEFAULTS.locationName;
   const latitude = numberEnv(env.LATITUDE, DEFAULTS.latitude);
   const longitude = numberEnv(env.LONGITUDE, DEFAULTS.longitude);
-  const timeZone = env.TIME_ZONE || DEFAULTS.timeZone;
 
   const pointUrl = 'https://api.weather.gov/points/' + latitude.toFixed(4) + ',' + longitude.toFixed(4);
   const point = await fetchNWSJSON(pointUrl);
@@ -193,6 +192,8 @@ async function buildWeatherFixture(env) {
   const forecastOffice = normalizeForecastOffice(pointProperties.cwa);
   const hourlyUrl = pointProperties.forecastHourly;
   const stationsUrl = pointProperties.observationStations;
+  const timeZone = pointProperties.timeZone || env.TIME_ZONE || DEFAULTS.timeZone;
+  const locationName = resolveLocationName(pointProperties, configuredLocationName);
 
   if (!hourlyUrl || !stationsUrl) {
     throw new Error('NWS point metadata is missing hourly forecast or observation stations');
@@ -217,104 +218,255 @@ async function buildWeatherFixture(env) {
 
   if (!periods.length) throw new Error('NWS hourly forecast returned no periods');
 
-  const stationUrl = pickStationUrl(stations);
-  const stationFeature = pickStationFeature(stations, stationUrl);
-
-  let observation = null;
-  if (stationUrl) {
-    try {
-      observation = await fetchNWSJSON(stationUrl.replace(/\/$/, '') + '/observations/latest');
-    } catch (error) {
-      console.warn('Latest observation unavailable', error && error.message ? error.message : error);
-    }
-  }
-
-  const station = {
-    id: stationFeature && stationFeature.properties && stationFeature.properties.stationIdentifier
-      ? stationFeature.properties.stationIdentifier
-      : stationUrl ? stationUrl.split('/').filter(Boolean).pop() : null,
-    name: stationFeature && stationFeature.properties ? stationFeature.properties.name || null : null
-  };
-
-  const current = normalizeObservation(observation);
+  const observationResult = await fetchBestAbaCastObservation(stations);
+  const station = observationResult.station;
+  const current = observationResult.current;
   const hours = periods.map(normalizeHourlyPeriod);
 
-  const weather = { current, hours };
-  const inputText = buildModelInput({
+  const weatherPrompt = buildProductionWeatherPrompt({
     locationName,
     timeZone,
-    forecastOffice,
-    station,
     current,
-    hours,
-    afd
+    hours
   });
+
+  const inputText = afd && afd.text
+    ? weatherPrompt + '\n\n' +
+      'NWS Area Forecast Discussion for office ' + (forecastOffice || 'unknown') +
+      ' (issued ' + (afd.issuanceTime || 'time unavailable') + '):\n' +
+      '---\n' + afd.text + '\n---\n\n' +
+      'Use the discussion for meteorological significance, but ground the final AbaCast in the local observation and next-8-hour point forecast above.'
+    : weatherPrompt + '\n\n' +
+      'No current NWS Area Forecast Discussion was available. Use the local observation and next-8-hour point forecast only.';
 
   return {
     location: { name: locationName, latitude, longitude, timeZone },
     forecastOffice,
     station,
-    weather,
+    weather: { current, hours },
     afd,
     inputText
   };
 }
 
-function buildModelInput(data) {
-  const lines = [];
-  lines.push('Location: ' + data.locationName);
-  lines.push('');
+async function fetchBestAbaCastObservation(stations) {
+  const features = stations && Array.isArray(stations.features) ? stations.features.slice(0, 5) : [];
+  if (!features.length) throw new Error('NWS returned no nearby observation stations');
 
-  if (data.current) {
-    const stationLabel = data.station && data.station.id ? ' (' + data.station.id + ')' : '';
-    lines.push('Current local observation' + stationLabel + ':');
-    lines.push('Observed: ' + formatInTimeZone(data.current.timestamp, data.timeZone));
-    lines.push('Conditions: ' + valueOrUnavailable(data.current.description));
-    lines.push('Temperature: ' + formatTemperature(data.current.temperatureF));
-    lines.push('Dew point: ' + formatTemperature(data.current.dewpointF));
-    lines.push('Humidity: ' + formatNumber(data.current.humidityPercent, '%'));
-    lines.push('Wind: ' + formatWind(data.current.windDirectionDegrees, data.current.windSpeedMph, data.current.windGustMph));
-    lines.push('Pressure: ' + formatNumber(data.current.pressureInHg, ' inHg', 2));
-  } else {
-    lines.push('Current local observation: unavailable');
+  const now = Date.now();
+
+  for (const feature of features) {
+    const stationId = feature && feature.properties ? feature.properties.stationIdentifier : null;
+    const stationUrl = feature && feature.id
+      ? feature.id
+      : stationId ? 'https://api.weather.gov/stations/' + encodeURIComponent(stationId) : null;
+
+    if (!stationUrl) continue;
+
+    try {
+      const observation = await fetchNWSJSON(stationUrl.replace(/\/$/, '') + '/observations/latest');
+      const p = observation && observation.properties ? observation.properties : null;
+      if (!p || !p.timestamp) continue;
+
+      const observedAt = Date.parse(p.timestamp);
+      if (!Number.isFinite(observedAt)) continue;
+
+      const ageMs = now - observedAt;
+      if (ageMs < -10 * 60 * 1000 || ageMs > 2 * 60 * 60 * 1000) continue;
+
+      const temperatureF = temperatureInFahrenheit(p.temperature);
+      if (!Number.isFinite(temperatureF)) continue;
+
+      const humidityPercent = p.relativeHumidity && Number.isFinite(p.relativeHumidity.value)
+        ? Math.round(p.relativeHumidity.value)
+        : 0;
+      const windSpeedMph = windSpeedInMph(p.windSpeed);
+      const windGustMph = windSpeedInMph(p.windGust);
+      const windDirectionDegrees = p.windDirection && Number.isFinite(p.windDirection.value)
+        ? p.windDirection.value
+        : null;
+      const description = typeof p.textDescription === 'string' && p.textDescription.trim()
+        ? p.textDescription.trim()
+        : 'Unknown';
+
+      const current = {
+        timestamp: p.timestamp,
+        description,
+        temperatureF: Math.round(temperatureF),
+        apparentTemperatureF: apparentTemperatureF(
+          Math.round(temperatureF),
+          humidityPercent,
+          Number.isFinite(windSpeedMph) ? Math.round(windSpeedMph) : 0
+        ),
+        humidityPercent,
+        windSpeedMph: Number.isFinite(windSpeedMph) ? Math.round(windSpeedMph) : 0,
+        windGustMph: Number.isFinite(windGustMph) ? Math.round(windGustMph) : null,
+        windDirectionDegrees,
+        windDirection: Number.isFinite(windDirectionDegrees) ? cardinalDirection8(windDirectionDegrees) : null
+      };
+
+      return {
+        station: {
+          id: stationId || stationUrl.split('/').filter(Boolean).pop() || null,
+          name: feature && feature.properties ? feature.properties.name || null : null
+        },
+        current
+      };
+    } catch (error) {
+      console.warn('Observation station unavailable', stationId || stationUrl, error && error.message ? error.message : error);
+    }
   }
 
-  lines.push('');
-  lines.push('Point-specific next-8-hour forecast:');
+  throw new Error('No recent NWS observation was available from the nearest five stations');
+}
 
-  data.hours.forEach(function(hour) {
-    const pop = Number.isFinite(hour.precipitationChancePercent) ? Math.round(hour.precipitationChancePercent) + '%' : 'unavailable';
-    const temp = Number.isFinite(hour.temperatureF) ? Math.round(hour.temperatureF) + '°F' : 'unavailable';
-    const wind = [hour.windDirection, hour.windSpeed].filter(Boolean).join(' ') || 'unavailable';
-    lines.push(
-      formatHour(hour.startTime, data.timeZone) + ': ' +
-      (hour.shortForecast || 'Forecast unavailable') +
-      ' | ' + temp +
-      ' | precipitation chance ' + pop +
-      ' | wind ' + wind
-    );
-  });
+function buildProductionWeatherPrompt(data) {
+  const gustText = Number.isFinite(data.current.windGustMph)
+    ? Math.round(data.current.windGustMph) + ' mph'
+    : 'unavailable';
+  const directionText = data.current.windDirection ? data.current.windDirection + ' ' : '';
 
-  lines.push('');
+  const hourlyText = data.hours.map(function(period) {
+    const timing = daypartFor(period.startTime, data.timeZone);
+    const precip = Number.isFinite(period.precipitationChancePercent)
+      ? Math.round(period.precipitationChancePercent) + '% precip'
+      : 'precip unknown';
 
-  if (data.afd && data.afd.text) {
-    lines.push(
-      'NWS Area Forecast Discussion for office ' +
-      (data.forecastOffice || 'unknown') +
-      ' (issued ' +
-      formatInTimeZone(data.afd.issuanceTime, data.timeZone) +
-      '):'
-    );
-    lines.push('---');
-    lines.push(data.afd.text);
-    lines.push('---');
-    lines.push('');
-    lines.push('Use the discussion for meteorological significance, but ground the final AbaCast in the local observation and point-specific next-8-hour forecast above.');
-  } else {
-    lines.push('No current NWS Area Forecast Discussion was available. Use the local observation and next-8-hour point forecast only.');
+    return '- ' + timing + ': ' +
+      (Number.isFinite(period.temperatureF) ? Math.round(period.temperatureF) + '°F' : 'temperature unavailable') +
+      ', ' + precip +
+      ', ' + (period.shortForecast || 'Forecast unavailable');
+  }).join('\n');
+
+  return [
+    'Current location: ' + data.locationName,
+    'Current observation: ' +
+      Math.round(data.current.temperatureF) + '°F, feels like ' +
+      Math.round(data.current.apparentTemperatureF) + '°F, ' +
+      data.current.description + ', humidity ' +
+      Math.round(data.current.humidityPercent) + '%, wind ' +
+      directionText + Math.round(data.current.windSpeedMph) + ' mph, gust ' + gustText + '.',
+    '',
+    'Next 8 hours:',
+    hourlyText
+  ].join('\n');
+}
+
+function resolveLocationName(pointProperties, fallback) {
+  const props = pointProperties && pointProperties.relativeLocation && pointProperties.relativeLocation.properties
+    ? pointProperties.relativeLocation.properties
+    : null;
+  if (props && props.city && props.state) return props.city + ', ' + props.state;
+  return fallback;
+}
+
+function daypartFor(value, timeZone) {
+  if (!value) return 'later';
+
+  const target = zonedDateParts(new Date(value), timeZone);
+  const today = zonedDateParts(new Date(), timeZone);
+  if (!target || !today) return 'later';
+
+  const targetDay = Date.UTC(target.year, target.month - 1, target.day);
+  const todayDay = Date.UTC(today.year, today.month - 1, today.day);
+  const dayDifference = Math.round((targetDay - todayDay) / 86400000);
+  const hour = target.hour;
+
+  if (dayDifference > 0) {
+    if (hour < 5) return 'overnight';
+    if (hour < 12) return 'tomorrow morning';
+    if (hour < 17) return 'tomorrow afternoon';
+    if (hour < 21) return 'tomorrow evening';
+    return 'tomorrow night';
   }
 
-  return lines.join('\n');
+  if (hour < 5) return 'early this morning';
+  if (hour < 12) return 'this morning';
+  if (hour < 17) return 'this afternoon';
+  if (hour < 21) return 'this evening';
+  return 'tonight';
+}
+
+function zonedDateParts(date, timeZone) {
+  if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+
+  const values = {};
+  for (const part of parts) {
+    if (part.type !== 'literal') values[part.type] = Number(part.value);
+  }
+
+  if (![values.year, values.month, values.day, values.hour].every(Number.isFinite)) return null;
+
+  return {
+    year: values.year,
+    month: values.month,
+    day: values.day,
+    hour: values.hour
+  };
+}
+
+function temperatureInFahrenheit(measurement) {
+  if (!measurement || !Number.isFinite(measurement.value)) return null;
+  const unitCode = String(measurement.unitCode || '').toLowerCase();
+  if (unitCode.includes('degf')) return measurement.value;
+  if (unitCode.includes('degc') || !unitCode) return measurement.value * 9 / 5 + 32;
+  return null;
+}
+
+function windSpeedInMph(measurement) {
+  if (!measurement || !Number.isFinite(measurement.value)) return null;
+  const unitCode = String(measurement.unitCode || '').toLowerCase();
+  const value = measurement.value;
+  if (unitCode.includes('km_h-1')) return value * 0.621371;
+  if (unitCode.includes('m_s-1')) return value * 2.23694;
+  if (unitCode.includes('mi_h-1')) return value;
+  if (unitCode.includes('kt')) return value * 1.15078;
+  return null;
+}
+
+function cardinalDirection8(degrees) {
+  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return directions[Math.round((((degrees % 360) + 360) % 360) / 45) % 8];
+}
+
+function apparentTemperatureF(temperatureF, humidity, windSpeedMph) {
+  const temperature = Number(temperatureF);
+
+  if (temperature >= 80 && humidity >= 40) {
+    const rh = Number(humidity);
+    const heatIndex =
+      -42.379 +
+      2.04901523 * temperature +
+      10.14333127 * rh -
+      0.22475541 * temperature * rh -
+      0.00683783 * temperature * temperature -
+      0.05481717 * rh * rh +
+      0.00122874 * temperature * temperature * rh +
+      0.00085282 * temperature * rh * rh -
+      0.00000199 * temperature * temperature * rh * rh;
+    return Math.round(heatIndex);
+  }
+
+  if (temperature <= 50 && windSpeedMph > 3) {
+    const windFactor = Math.pow(Number(windSpeedMph), 0.16);
+    return Math.round(
+      35.74 +
+      0.6215 * temperature -
+      35.75 * windFactor +
+      0.4275 * temperature * windFactor
+    );
+  }
+
+  return Math.round(temperature);
 }
 
 async function runOpenAI(inputText, env) {
