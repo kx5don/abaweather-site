@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AbaCast Model Lab</title>
+  <meta name="description" content="A live side-by-side experiment comparing three AI models on the same NWS weather data.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="sky">
+    <header class="site-header shell">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">⚗</div>
+        <div>
+          <h1>AbaCast Model Lab</h1>
+          <p>Same weather. Different AI. Real-world tests, real results.</p>
+        </div>
+      </div>
+      <div class="header-note">
+        <span>A fun experiment, not part of AbaWeather.</span>
+        <span>Powered by NWS data</span>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="toolbar panel">
+        <div>
+          <div class="location-row">
+            <span class="pin" aria-hidden="true">●</span>
+            <h2 id="locationName">Plano, TX</h2>
+          </div>
+          <p id="latestTimestamp" class="muted">No experiment loaded yet.</p>
+        </div>
+        <div class="run-controls">
+          <button id="runButton" class="run-button" type="button">
+            <span aria-hidden="true">↻</span>
+            Run New Experiment
+          </button>
+          <div id="cooldownText" class="cooldown muted" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="main-grid">
+        <article class="panel input-panel">
+          <div class="section-title">
+            <span class="section-icon" aria-hidden="true">▤</span>
+            <div>
+              <h2>What the models saw</h2>
+              <p>Identical input for all three models</p>
+            </div>
+          </div>
+
+          <section class="data-section">
+            <div class="subheading-row">
+              <h3>Current Observation <span id="stationLabel"></span></h3>
+              <span id="observationTime" class="muted small"></span>
+            </div>
+            <div id="currentObservation" class="metrics-grid empty-state">
+              Waiting for the first experiment.
+            </div>
+          </section>
+
+          <section class="data-section">
+            <h3>Next 8 Hours <span class="muted small">(Point Forecast)</span></h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Weather</th>
+                    <th>Temp</th>
+                    <th>PoP</th>
+                    <th>Wind</th>
+                  </tr>
+                </thead>
+                <tbody id="hourlyBody">
+                  <tr><td colspan="5" class="empty-cell">Waiting for forecast data.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="data-section">
+            <div class="subheading-row">
+              <h3>NWS Area Forecast Discussion <span id="forecastOffice"></span></h3>
+              <span id="afdTime" class="muted small"></span>
+            </div>
+            <div id="afdPreview" class="afd-preview empty-state">Waiting for AFD data.</div>
+            <details id="afdDetails" class="details-box">
+              <summary>Show full AFD text</summary>
+              <pre id="afdFullText"></pre>
+            </details>
+          </section>
+
+          <section class="data-section">
+            <details class="details-box">
+              <summary>System Prompt <span class="muted">(AbaCast instructions)</span></summary>
+              <pre id="systemPrompt"></pre>
+            </details>
+          </section>
+
+          <section class="data-section">
+            <details class="details-box">
+              <summary>Exact model input</summary>
+              <pre id="exactInput"></pre>
+            </details>
+          </section>
+        </article>
+
+        <article class="panel output-panel">
+          <div class="section-title">
+            <span class="section-icon sparkle" aria-hidden="true">✦</span>
+            <div>
+              <h2>Model Responses</h2>
+              <p>Same input. Three different AI models. 135 characters or less.</p>
+            </div>
+          </div>
+
+          <div id="modelCards" class="model-stack">
+            <div class="empty-state model-empty">Run the first experiment to populate the model cage match.</div>
+          </div>
+
+          <div class="fairness-note">
+            <strong>Fair fight:</strong> all three providers receive the same system prompt and the same frozen weather input for each run.
+          </div>
+        </article>
+      </section>
+
+      <section class="panel history-panel">
+        <div class="history-heading">
+          <div>
+            <h2>Recent Experiments</h2>
+            <p class="muted">Previous runs for comparison</p>
+          </div>
+          <button id="latestButton" type="button" class="secondary-button">View Latest</button>
+        </div>
+        <div id="historyStrip" class="history-strip">
+          <span class="muted">No history yet.</span>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell footer">
+      <p>AbaCast Model Lab is an independent experiment using public National Weather Service data. Model output is not weather guidance.</p>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
