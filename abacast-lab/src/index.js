@@ -213,9 +213,12 @@ async function buildWeatherFixture(env) {
       })
     : Promise.resolve(null);
 
+  const limitedStationsUrl = new URL(stationsUrl);
+  limitedStationsUrl.searchParams.set('limit', '5');
+
   const [hourly, stations, afd] = await Promise.all([
     fetchNWSJSON(hourlyUrl),
-    fetchNWSJSON(stationsUrl),
+    fetchNWSJSON(limitedStationsUrl.toString()),
     afdPromise
   ]);
 
