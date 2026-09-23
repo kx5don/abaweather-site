@@ -109,7 +109,15 @@ export default {
 
         try {
           const experiment = await generateExperiment(env, 'manual', null);
-          return json({ ok: true, experiment });
+          return json({
+            ok: true,
+            experiment,
+            manualCooldownSeconds: clampInteger(
+              numberEnv(env.MANUAL_IP_COOLDOWN_SECONDS, DEFAULTS.manualIpCooldownSeconds),
+              10,
+              3600
+            )
+          });
         } catch (error) {
           console.error('Manual generation failed', error);
           return json({ ok: false, error: 'Experiment generation failed' }, 502);
@@ -618,7 +626,7 @@ function normalizeHourlyPeriod(period) {
     shortForecast: period.shortForecast || null,
     precipitationChancePercent: period.probabilityOfPrecipitation && Number.isFinite(period.probabilityOfPrecipitation.value)
       ? period.probabilityOfPrecipitation.value
-      : 0,
+      : null,
     windSpeed: period.windSpeed || null,
     windDirection: period.windDirection || null,
     isDaytime: Boolean(period.isDaytime)
@@ -737,10 +745,17 @@ function compactProvider(provider) {
 
 async function claimGenerationLock(db, lockKey) {
   const now = Math.floor(Date.now() / 1000);
-  const result = await db.prepare(
+  const inserted = await db.prepare(
     'INSERT OR IGNORE INTO generation_locks (lock_key, acquired_at_epoch) VALUES (?1, ?2)'
   ).bind(lockKey, now).run();
-  return Boolean(result && result.meta && result.meta.changes);
+
+  if (inserted && inserted.meta && inserted.meta.changes) return true;
+
+  const stolen = await db.prepare(
+    'UPDATE generation_locks SET acquired_at_epoch = ?2 WHERE lock_key = ?1 AND acquired_at_epoch < ?3'
+  ).bind(lockKey, now, now - 120).run();
+
+  return Boolean(stolen && stolen.meta && stolen.meta.changes);
 }
 
 async function releaseGenerationLock(db, lockKey) {
