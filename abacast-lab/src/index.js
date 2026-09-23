@@ -738,39 +738,6 @@ async function fetchNWSJSON(url) {
   return response.json();
 }
 
-function pickStationUrl(stations) {
-  if (stations && Array.isArray(stations.observationStations) && stations.observationStations.length) {
-    return stations.observationStations[0];
-  }
-  if (stations && Array.isArray(stations.features) && stations.features.length && stations.features[0].id) {
-    return stations.features[0].id;
-  }
-  return null;
-}
-
-function pickStationFeature(stations, stationUrl) {
-  if (!stations || !Array.isArray(stations.features) || !stations.features.length) return null;
-  if (!stationUrl) return stations.features[0];
-  return stations.features.find(function(feature) { return feature && feature.id === stationUrl; }) || stations.features[0];
-}
-
-function normalizeObservation(observation) {
-  const p = observation && observation.properties ? observation.properties : null;
-  if (!p) return null;
-
-  return {
-    timestamp: p.timestamp || null,
-    description: p.textDescription || null,
-    temperatureF: celsiusToFahrenheit(quantity(p.temperature)),
-    dewpointF: celsiusToFahrenheit(quantity(p.dewpoint)),
-    humidityPercent: quantity(p.relativeHumidity),
-    windSpeedMph: kilometersPerHourToMph(quantity(p.windSpeed)),
-    windGustMph: kilometersPerHourToMph(quantity(p.windGust)),
-    windDirectionDegrees: quantity(p.windDirection),
-    pressureInHg: pascalsToInHg(quantity(p.barometricPressure))
-  };
-}
-
 function normalizeHourlyPeriod(period) {
   return {
     startTime: period.startTime || null,
@@ -1028,77 +995,10 @@ function sumNullable(a, b) {
   return aValue + bValue;
 }
 
-function quantity(value) {
-  return value && Number.isFinite(value.value) ? value.value : null;
-}
-
-function celsiusToFahrenheit(value) {
-  return Number.isFinite(value) ? value * 9 / 5 + 32 : null;
-}
-
-function kilometersPerHourToMph(value) {
-  return Number.isFinite(value) ? value * 0.621371 : null;
-}
-
-function pascalsToInHg(value) {
-  return Number.isFinite(value) ? value / 3386.389 : null;
-}
-
 function normalizeForecastOffice(value) {
   if (typeof value !== 'string') return null;
   const office = value.trim().toUpperCase();
   return /^[A-Z]{3}$/.test(office) ? office : null;
-}
-
-function degreesToCompass(degrees) {
-  if (!Number.isFinite(degrees)) return null;
-  const points = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-  return points[Math.round(((degrees % 360) + 360) % 360 / 22.5) % 16];
-}
-
-function formatWind(directionDegrees, speedMph, gustMph) {
-  if (!Number.isFinite(speedMph)) return 'unavailable';
-  const direction = degreesToCompass(directionDegrees);
-  let text = (direction ? direction + ' ' : '') + Math.round(speedMph) + ' mph';
-  if (Number.isFinite(gustMph) && gustMph > speedMph + 2) text += ', gusting ' + Math.round(gustMph) + ' mph';
-  return text;
-}
-
-function formatTemperature(value) {
-  return Number.isFinite(value) ? Math.round(value) + '°F' : 'unavailable';
-}
-
-function formatNumber(value, suffix, digits) {
-  if (!Number.isFinite(value)) return 'unavailable';
-  return value.toFixed(Number.isFinite(digits) ? digits : 0) + suffix;
-}
-
-function formatHour(value, timeZone) {
-  if (!value) return 'Unknown time';
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: 'numeric'
-  }).format(date);
-}
-
-function formatInTimeZone(value, timeZone) {
-  if (!value) return 'time unavailable';
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short'
-  }).format(date);
-}
-
-function valueOrUnavailable(value) {
-  return value || 'unavailable';
 }
 
 function numberEnv(value, fallback) {
