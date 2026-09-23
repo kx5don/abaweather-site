@@ -173,10 +173,10 @@ function renderCurrent(exp, timeZone) {
   const metrics = [
     ['Conditions', current.description || 'Unavailable'],
     ['Temp', numberWithUnit(current.temperatureF, '°F', 0)],
+    ['Feels Like', numberWithUnit(current.apparentTemperatureF, '°F', 0)],
     ['Wind', formatWind(current)],
-    ['Dew Point', numberWithUnit(current.dewpointF, '°F', 0)],
     ['Humidity', numberWithUnit(current.humidityPercent, '%', 0)],
-    ['Pressure', numberWithUnit(current.pressureInHg, ' inHg', 2)]
+    ['Gust', Number.isFinite(current.windGustMph) ? Math.round(current.windGustMph) + ' mph' : 'Unavailable']
   ];
 
   els.currentObservation.innerHTML = metrics.map(function(metric) {
@@ -386,18 +386,8 @@ function formatShortDate(value, timeZone) {
 
 function formatWind(current) {
   if (!Number.isFinite(current.windSpeedMph)) return 'Unavailable';
-  const direction = compass(current.windDirectionDegrees);
-  let text = (direction ? direction + ' ' : '') + Math.round(current.windSpeedMph) + ' mph';
-  if (Number.isFinite(current.windGustMph) && current.windGustMph > current.windSpeedMph + 2) {
-    text += ' G' + Math.round(current.windGustMph);
-  }
-  return text;
-}
-
-function compass(degrees) {
-  if (!Number.isFinite(degrees)) return '';
-  const points = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-  return points[Math.round((((degrees % 360) + 360) % 360) / 22.5) % 16];
+  const direction = current.windDirection || '';
+  return (direction ? direction + ' ' : '') + Math.round(current.windSpeedMph) + ' mph';
 }
 
 function numberWithUnit(value, unit, digits) {
