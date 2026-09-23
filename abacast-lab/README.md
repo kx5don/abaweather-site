@@ -144,6 +144,7 @@ Default limits:
 - 1 successful attempt per client IP every 60 seconds.
 - At most 1 manual experiment globally every 30 seconds.
 - IPs are salted and SHA-256 hashed before storage.
+- The browser must send a lab-specific request header for manual runs; cross-origin browser requests are not enabled.
 - Scheduled QStash runs bypass the public manual rate limiter.
 
 All limits can be adjusted in `wrangler.jsonc`.
@@ -203,6 +204,7 @@ The current AbaCast system prompt is copied into this project so all three model
 ## Notes
 
 - No provider API key is ever sent to browser JavaScript.
+- Static responses carry clickjacking, MIME-sniffing, referrer, permissions, CSP, and no-index headers.
 - No model call occurs just because somebody opens or refreshes the page.
 - The dashboard shows raw responses and separately marks whether each result stayed within 135 characters and ended with an emoji.
 - Provider failures are stored alongside successful results so partial experiments remain useful.
