@@ -26,9 +26,8 @@ Model output is deliberately **not rewritten or normalized** in the lab. The poi
 ## Architecture
 
 ```text
-QStash every 15 min ──────┐
-                          ├── POST /api/generate
-Manual dashboard button ──┘        │
+QStash every 15 min ─────────────> POST /api/generate
+                                   │
                                    ├── NWS /points
                                    ├── NWS observation
                                    ├── NWS hourly forecast
@@ -98,14 +97,12 @@ npx wrangler secret put OPENAI_API_KEY
 npx wrangler secret put ANTHROPIC_API_KEY
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put GENERATE_SECRET
-npx wrangler secret put RATE_LIMIT_SALT
 ```
 
 - `OPENAI_API_KEY`: OpenAI developer API key.
 - `ANTHROPIC_API_KEY`: Anthropic developer API key.
 - `GEMINI_API_KEY`: Google Gemini Developer API key.
 - `GENERATE_SECRET`: a new random secret used only by QStash to invoke the scheduled generation endpoint.
-- `RATE_LIMIT_SALT`: a random value used before hashing client IPs for manual-run rate limiting. Raw IP addresses are never written to D1.
 
 For local development, copy `.dev.vars.example` to `.dev.vars` and fill in test values. `.dev.vars` is ignored by Git.
 
@@ -135,20 +132,6 @@ Use a **new secret dedicated to this lab** rather than reusing any AbaWeather pr
 
 Scheduled requests are bucketed into 15-minute windows. If QStash retries the same window, the Worker reuses the stored experiment instead of intentionally running all three models twice. A stale generation lock can be reclaimed after two minutes.
 
-## Manual refresh protection
-
-The public **Run New Experiment** button calls `POST /api/manual-run`.
-
-Default limits:
-
-- 1 successful attempt per client IP every 60 seconds.
-- At most 1 manual experiment globally every 30 seconds.
-- IPs are salted and SHA-256 hashed before storage.
-- The browser must send a lab-specific request header for manual runs; cross-origin browser requests are not enabled.
-- Scheduled QStash runs bypass the public manual rate limiter.
-
-All limits can be adjusted in `wrangler.jsonc`.
-
 ## History
 
 D1 retains experiments for 30 days by default. The dashboard displays the latest 20 and allows visitors to reopen prior tests without calling any AI provider.
@@ -162,7 +145,6 @@ D1 retains experiments for 30 days by default. The dashboard displays the latest
 | `/api/latest` | GET | Latest stored experiment |
 | `/api/history?limit=20` | GET | Recent experiment summaries |
 | `/api/experiments/:id` | GET | One complete historical experiment |
-| `/api/manual-run` | POST | Rate-limited public experiment run |
 | `/api/generate` | POST | QStash-only scheduled run; Bearer secret required |
 
 ## Models
