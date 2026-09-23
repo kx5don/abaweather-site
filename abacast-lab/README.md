@@ -9,8 +9,8 @@ This project is intentionally isolated from the production AbaWeather app and ba
 Every experiment:
 
 1. Resolves the fixed Plano point through the National Weather Service API.
-2. Fetches the nearest NWS observation.
-3. Fetches the point-specific next 8 hourly forecast periods.
+2. Checks the nearest five NWS stations and uses the first recent, valid observation, matching the production AbaCast path.
+3. Fetches the point-specific next 8 hourly forecast periods and formats them with the same daypart wording used by the app.
 4. Fetches the latest NWS Area Forecast Discussion for the point's WFO.
 5. Extracts only the **SHORT TERM** AFD section when available.
 6. Freezes that weather input and the current AbaCast system prompt.
@@ -174,7 +174,7 @@ Anthropic: claude-haiku-4-5-20251001
 Google:    gemini-3.5-flash-lite
 ```
 
-The Google model is the current stable Flash-Lite generation rather than the older Gemini 2.5 model. The Anthropic model uses the pinned Haiku 4.5 version so the experiment does not silently change underneath us.
+The Google model is the current stable Flash-Lite generation rather than the older Gemini 2.5 model. The Anthropic model uses the pinned Haiku 4.5 version so the experiment does not silently change underneath us. Anthropic currently lists this specific version as active with a tentative retirement no sooner than October 15, 2026, so the `ANTHROPIC_MODEL` variable is intentionally easy to swap when a newer low-cost Claude model is appropriate.
 
 Estimated per-run cost shown in the UI is calculated from token usage using list pricing recorded on **2026-09-23**:
 
@@ -198,7 +198,7 @@ America/Chicago
 
 The Worker resolves the NWS WFO dynamically from `/points` rather than hard-coding FWD. That keeps the experiment logic honest and makes changing the test location later trivial.
 
-The current AbaCast system prompt is copied into this project so all three models receive exactly the same instructions. Any future production prompt changes should be intentionally copied here when a new comparison is desired.
+The current AbaCast system prompt is copied into this project so all three models receive exactly the same instructions. The local weather snapshot and AFD wrapper also intentionally mirror the production AbaCast input structure. Any future production prompt or input-format changes should be intentionally copied here when a new comparison is desired.
 
 ## Notes
 
