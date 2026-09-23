@@ -8,9 +8,12 @@
     "deploy": "wrangler deploy",
     "d1:create": "wrangler d1 create abacast-model-lab",
     "d1:migrate:local": "wrangler d1 migrations apply abacast-model-lab --local",
-    "d1:migrate:remote": "wrangler d1 migrations apply abacast-model-lab --remote"
+    "d1:migrate:remote": "wrangler d1 migrations apply abacast-model-lab --remote",
+    "check": "node --check src/index.js && node --check public/app.js",
+    "test": "npm run check"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
-  }
+  },
+  "type": "module"
 }
