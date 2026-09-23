@@ -3,7 +3,6 @@
 const state = {
   latestId: null,
   selectedId: null,
-  cooldownTimer: null,
   toastTimer: null
 };
 
@@ -22,8 +21,6 @@ const els = {
   exactInput: document.getElementById('exactInput'),
   modelCards: document.getElementById('modelCards'),
   historyStrip: document.getElementById('historyStrip'),
-  runButton: document.getElementById('runButton'),
-  cooldownText: document.getElementById('cooldownText'),
   latestButton: document.getElementById('latestButton'),
   toast: document.getElementById('toast')
 };
@@ -31,7 +28,6 @@ const els = {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  els.runButton.addEventListener('click', runExperiment);
   els.latestButton.addEventListener('click', function() {
     state.selectedId = null;
     loadLatest(true);
@@ -79,66 +75,6 @@ async function loadExperiment(id) {
   }
 }
 
-async function runExperiment() {
-  els.runButton.disabled = true;
-  els.runButton.textContent = 'Running all three models…';
-  els.cooldownText.textContent = 'Fetching fresh NWS data and calling each provider in parallel.';
-
-  try {
-    const response = await fetch('/api/manual-run', {
-      method: 'POST',
-      headers: { 'X-AbaCast-Lab': 'dashboard' }
-    });
-    const payload = await response.json();
-
-    if (response.status === 429) {
-      startCooldown(Number(payload.retryAfterSeconds) || 60);
-      throw new Error('Easy there, Jim Cantore. The lab is cooling down for a moment.');
-    }
-
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || 'Experiment failed');
-    }
-
-    state.selectedId = null;
-    state.latestId = payload.experiment.id;
-    renderExperiment(payload.experiment);
-    await loadHistory();
-    startCooldown(Number(payload.manualCooldownSeconds) || 60);
-    showToast('Fresh experiment complete.');
-  } catch (error) {
-    showToast(error.message || 'Experiment failed');
-    if (!state.cooldownTimer) {
-      els.runButton.disabled = false;
-      els.runButton.textContent = '↻ Run New Experiment';
-      els.cooldownText.textContent = '';
-    }
-  }
-}
-
-function startCooldown(seconds) {
-  if (state.cooldownTimer) window.clearInterval(state.cooldownTimer);
-
-  let remaining = Math.max(1, Math.ceil(seconds));
-  els.runButton.disabled = true;
-
-  function tick() {
-    els.runButton.textContent = '↻ Run New Experiment';
-    els.cooldownText.textContent = 'Next manual run available in ' + remaining + ' second' + (remaining === 1 ? '' : 's') + '.';
-    remaining -= 1;
-
-    if (remaining < 0) {
-      window.clearInterval(state.cooldownTimer);
-      state.cooldownTimer = null;
-      els.runButton.disabled = false;
-      els.cooldownText.textContent = '';
-    }
-  }
-
-  tick();
-  state.cooldownTimer = window.setInterval(tick, 1000);
-}
-
 function renderExperiment(exp) {
   if (!exp) return;
 
@@ -147,7 +83,7 @@ function renderExperiment(exp) {
   els.latestTimestamp.textContent =
     (exp.id === state.latestId && !state.selectedId ? 'Latest test: ' : 'Viewing test: ') +
     formatDateTime(exp.createdAt, timeZone) +
-    ' · ' + (exp.source === 'manual' ? 'manual run' : 'scheduled run');
+    ' · scheduled run';
 
   renderCurrent(exp, timeZone);
   renderHourly(exp, timeZone);
@@ -296,7 +232,7 @@ function renderHistory(items) {
     const active = state.selectedId ? item.id === state.selectedId : item.id === state.latestId;
     return '<button type="button" class="history-button' + (active ? ' active' : '') + '" data-id="' + escapeHtml(item.id) + '">' +
       '<strong>' + escapeHtml(formatTime(item.createdAt, 'America/Chicago')) + '</strong>' +
-      '<span>' + escapeHtml(formatShortDate(item.createdAt, 'America/Chicago')) + (item.source === 'manual' ? ' · manual' : '') + '</span>' +
+      '<span>' + escapeHtml(formatShortDate(item.createdAt, 'America/Chicago')) + '</span>' +
       '</button>';
   }).join('');
 
