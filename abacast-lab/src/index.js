@@ -19,8 +19,6 @@ const DEFAULTS = {
   anthropicModel: 'claude-haiku-4-5-20251001',
   geminiModel: 'gemini-3.5-flash-lite',
   historyLimit: 20,
-  manualIpCooldownSeconds: 60,
-  manualGlobalCooldownSeconds: 30,
   retentionDays: 30
 };
 
@@ -104,37 +102,6 @@ export default {
         }
       }
 
-      if (url.pathname === '/api/manual-run' && request.method === 'POST') {
-        if (request.headers.get('X-AbaCast-Lab') !== 'dashboard') {
-          return json({ ok: false, error: 'Forbidden' }, 403);
-        }
-
-        const rateLimit = await enforceManualRateLimit(request, env);
-        if (!rateLimit.allowed) {
-          return json({
-            ok: false,
-            error: 'Rate limit reached',
-            retryAfterSeconds: rateLimit.retryAfterSeconds
-          }, 429, { 'Retry-After': String(rateLimit.retryAfterSeconds) });
-        }
-
-        try {
-          const experiment = await generateExperiment(env, 'manual', null);
-          return json({
-            ok: true,
-            experiment,
-            manualCooldownSeconds: clampInteger(
-              numberEnv(env.MANUAL_IP_COOLDOWN_SECONDS, DEFAULTS.manualIpCooldownSeconds),
-              10,
-              3600
-            )
-          });
-        } catch (error) {
-          console.error('Manual generation failed', error);
-          return json({ ok: false, error: 'Experiment generation failed' }, 502);
-        }
-      }
-
       if (url.pathname.startsWith('/api/')) {
         return json({ ok: false, error: 'Not found' }, 404);
       }
@@ -184,8 +151,7 @@ async function generateExperiment(env, source, scheduleBucket) {
   const cutoff = experiment.createdAtEpoch - retentionDays * 86400;
   await Promise.all([
     env.DB.prepare('DELETE FROM experiments WHERE created_at_epoch < ?1').bind(cutoff).run(),
-    env.DB.prepare('DELETE FROM generation_locks WHERE acquired_at_epoch < ?1').bind(cutoff).run(),
-    env.DB.prepare('DELETE FROM manual_rate_limits WHERE last_run_epoch < ?1').bind(experiment.createdAtEpoch - 86400).run()
+    env.DB.prepare('DELETE FROM generation_locks WHERE acquired_at_epoch < ?1').bind(cutoff).run()
   ]);
 
   return experiment;
@@ -893,61 +859,6 @@ async function claimGenerationLock(db, lockKey) {
 
 async function releaseGenerationLock(db, lockKey) {
   await db.prepare('DELETE FROM generation_locks WHERE lock_key = ?1').bind(lockKey).run();
-}
-
-async function enforceManualRateLimit(request, env) {
-  const now = Math.floor(Date.now() / 1000);
-  const ipCooldown = clampInteger(
-    numberEnv(env.MANUAL_IP_COOLDOWN_SECONDS, DEFAULTS.manualIpCooldownSeconds),
-    10,
-    3600
-  );
-  const globalCooldown = clampInteger(
-    numberEnv(env.MANUAL_GLOBAL_COOLDOWN_SECONDS, DEFAULTS.manualGlobalCooldownSeconds),
-    5,
-    3600
-  );
-
-  const ip = request.headers.get('CF-Connecting-IP') || 'local-development';
-  const ipHash = await hashClientIdentifier(ip, env.RATE_LIMIT_SALT || 'development-only-change-me');
-
-  const ipClaim = await claimRateLimit(env.DB, 'ip:' + ipHash, now, ipCooldown);
-  if (!ipClaim.allowed) return ipClaim;
-
-  const globalClaim = await claimRateLimit(env.DB, 'global', now, globalCooldown);
-  if (!globalClaim.allowed) return globalClaim;
-
-  return { allowed: true, retryAfterSeconds: 0 };
-}
-
-async function claimRateLimit(db, key, now, cooldownSeconds) {
-  const result = await db.prepare(
-    'INSERT INTO manual_rate_limits (rate_key, last_run_epoch) VALUES (?1, ?2) ' +
-    'ON CONFLICT(rate_key) DO UPDATE SET last_run_epoch = excluded.last_run_epoch ' +
-    'WHERE excluded.last_run_epoch - manual_rate_limits.last_run_epoch >= ?3'
-  ).bind(key, now, cooldownSeconds).run();
-
-  if (result && result.meta && result.meta.changes) {
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
-
-  const row = await db.prepare(
-    'SELECT last_run_epoch FROM manual_rate_limits WHERE rate_key = ?1 LIMIT 1'
-  ).bind(key).first();
-
-  const elapsed = row && Number.isFinite(row.last_run_epoch) ? now - row.last_run_epoch : 0;
-  return {
-    allowed: false,
-    retryAfterSeconds: Math.max(1, cooldownSeconds - elapsed)
-  };
-}
-
-async function hashClientIdentifier(value, salt) {
-  const bytes = new TextEncoder().encode(salt + ':' + value);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest)).map(function(byte) {
-    return byte.toString(16).padStart(2, '0');
-  }).join('');
 }
 
 function isAuthorizedGenerator(request, env) {
