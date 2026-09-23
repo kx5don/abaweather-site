@@ -136,49 +136,6 @@ body {
   margin: 4px 0 0;
 }
 
-.run-controls {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.run-button,
-.secondary-button {
-  border: 0;
-  border-radius: 12px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform .14s ease, box-shadow .14s ease, opacity .14s ease;
-}
-
-.run-button {
-  min-height: 48px;
-  padding: 0 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  color: white;
-  background: linear-gradient(135deg, var(--blue), #2d96ff);
-  box-shadow: 0 9px 22px rgba(20,121,255,.25);
-}
-
-.run-button:hover:not(:disabled),
-.secondary-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.run-button:disabled {
-  opacity: .55;
-  cursor: wait;
-}
-
-.cooldown {
-  min-width: 150px;
-  max-width: 220px;
-  font-size: .82rem;
-  text-align: right;
-}
 
 .main-grid {
   display: grid;
@@ -652,7 +609,6 @@ pre {
 
   .site-header,
   .toolbar,
-  .run-controls,
   .history-heading {
     align-items: stretch;
     flex-direction: column;
@@ -662,19 +618,8 @@ pre {
     display: none;
   }
 
-  .run-controls {
-    gap: 7px;
-  }
 
-  .run-button {
-    justify-content: center;
-  }
 
-  .cooldown {
-    max-width: none;
-    min-width: 0;
-    text-align: left;
-  }
 
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
