@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS experiments (
   id TEXT PRIMARY KEY,
   created_at TEXT NOT NULL,
   created_at_epoch INTEGER NOT NULL,
-  source TEXT NOT NULL CHECK (source IN ('scheduled', 'manual')),
+  source TEXT NOT NULL CHECK (source = 'scheduled'),
   schedule_bucket TEXT UNIQUE,
   location_name TEXT NOT NULL,
   latitude REAL NOT NULL,
@@ -28,7 +28,3 @@ CREATE TABLE IF NOT EXISTS generation_locks (
   acquired_at_epoch INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS manual_rate_limits (
-  rate_key TEXT PRIMARY KEY,
-  last_run_epoch INTEGER NOT NULL
-);
