@@ -105,6 +105,10 @@ export default {
       }
 
       if (url.pathname === '/api/manual-run' && request.method === 'POST') {
+        if (request.headers.get('X-AbaCast-Lab') !== 'dashboard') {
+          return json({ ok: false, error: 'Forbidden' }, 403);
+        }
+
         const rateLimit = await enforceManualRateLimit(request, env);
         if (!rateLimit.allowed) {
           return json({
@@ -1037,7 +1041,10 @@ function parseJson(value) {
 function json(payload, status, extraHeaders) {
   const headers = Object.assign({
     'Content-Type': 'application/json; charset=utf-8',
-    'Cache-Control': 'no-store'
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    'X-Robots-Tag': 'noindex, nofollow'
   }, extraHeaders || {});
   return new Response(JSON.stringify(payload), { status: status || 200, headers });
 }
