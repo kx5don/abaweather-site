@@ -270,3 +270,24 @@ li + li {
     line-height: 1.4;
   }
 }
+
+
+.footer-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.footer-nav a {
+  color: inherit;
+  font-weight: 650;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.footer-nav a:hover {
+  color: white;
+}
