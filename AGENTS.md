@@ -16,6 +16,11 @@ These are the shared baseline instructions for Don's AbaWeather repositories. Mo
 - Do not fix, refactor, or investigate tangential issues unless they block the requested work. Briefly report them and let Don decide whether to address them.
 - Read the relevant repository documentation and nearby code before editing, and preserve the existing architecture and conventions.
 
+## Documentation
+
+- Read `docs/README.md` before changing code. It indexes this repository's architecture, configuration, data and flow documents.
+- Update the matching document in `docs/` in the same pull request when a change affects behavior, configuration, data handling or a documented flow.
+
 ## Security and verification
 
 - Take a security-first approach. Protect secrets and production data, preserve trust boundaries, validate untrusted input, and do not weaken authentication, App Attest, Cloudflare Worker/D1/KV/QStash, or other security controls.
