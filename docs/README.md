@@ -32,10 +32,9 @@ the stylesheet, loaded as `styles.css?v=20260924-2`.
 
 ## Hosting
 
-The `CNAME` file is the GitHub Pages convention for a custom domain, so the
-site is most likely published by GitHub Pages from `main`. That setting
-lives in the repository's GitHub settings (Settings → Pages), not in a file
-here; confirm it there.
+The site is hosted on **GitHub Pages**, published from `main`, with the
+custom domain set by the `CNAME` file. The Pages settings themselves live in
+the repository's GitHub settings (Settings → Pages), not in a file here.
 
 `/labs/` is not part of this repository. It is served by the
 `abaweather-labs` Worker through a Cloudflare route on `abaweather.com`.
