@@ -155,6 +155,32 @@ p:last-child {
   line-height: 1.65;
 }
 
+.app-store-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  color: white;
+  background: var(--ink);
+  font-weight: 750;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.app-store-link:hover {
+  color: white;
+  background: var(--blue-dark);
+  transform: translateY(-1px);
+}
+
+.app-store-link:focus-visible {
+  outline: 3px solid rgba(20, 121, 255, 0.35);
+  outline-offset: 3px;
+}
+
 a {
   color: var(--blue-dark);
   font-weight: 650;
