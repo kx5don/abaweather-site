@@ -21,14 +21,14 @@ flowchart LR
 
 | Path | Served at | Contents |
 | --- | --- | --- |
-| `index.html` | `/` | Support page: what the app is, support email, features, data sources, privacy summary, safety notice |
+| `index.html` | `/` | Support page: App Store link, what the app is, support email, features, data sources, privacy summary, safety notice |
 | `privacy/index.html` | `/privacy/` | Privacy policy (effective date at the top) |
 | `styles.css` | `/styles.css` | Shared styles for both pages |
 | `CNAME` | — | `abaweather.com`: the custom domain for the static host |
 | `README.md` | — | One-paragraph summary |
 
 Both pages share the same header, footer (Home · Labs · Privacy Policy) and
-the stylesheet, loaded as `styles.css?v=20260924-2`.
+the stylesheet, loaded as `styles.css?v=20261106-1`.
 
 ## Hosting
 
